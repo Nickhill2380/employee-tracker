@@ -47,7 +47,7 @@ const promptUser = () => {
             }
             else if (choice === 'View all Employees By Manager') {
                 console.log('Viewing all employees by manager.')
-                promptUser();
+                allEmployeesByManager();
             }
             else if (choice === 'Add Employee') {
                inquirer
@@ -137,19 +137,59 @@ const promptUser = () => {
             }
             else if(choice === 'Update Employee Manager') {
                 console.log('Whose manager would you like to update?')
-                promptUser();
+                updateEmployeeManager();
             }
             else if (choice === 'View All Roles') {
                 console.log('Viewing all roles')
                 viewRoles();
             }
             else if (choice === 'Add Role') {
-                console.log("What role would you like to add?")
-                promptUser();
+                inquirer
+                .prompt([
+                    {
+                        type: 'input',
+                        name:'title',
+                        message: 'What is the role title?'
+                    },
+                    {
+                        type: 'number',
+                        name: 'salary',
+                        message: 'What is the salary for this role?'
+                    },
+                    {
+                        type:'list',
+                        name: 'department',
+                        message:'What department does this role belong to?',
+                        choices: [('Sales'), ('Engineering'), ('Finance'), ('Legal')]
+                    }
+                ])
+                .then(({title,salary,department}) => {
+                    connection.query(
+                        'SELECT id FROM department WHERE ?',
+                        {
+                           name: department
+                        }, 
+                       function(err,res) {
+                           if(err) throw err;
+                       console.log(res[0].id);
+                       console.log(res);
+                       addRole(title, salary, res[0].id);
+                })
+            })
             }
             else if(choice === 'Remove Role') {
-                console.log('What role would you like to remove?')
-                promptUser();
+                inquirer
+                .prompt([
+                    {
+                        type: 'list',
+                        name:'title',
+                        message: 'What is the role title?',
+                        choices:[('Sales Lead'),('Salesperson'), ('Lead Engineer'), ('Software Engineer'), ('Accountant'),('Legal Team Lead'), ('Lawyer')]
+                    }
+                ])
+                .then(({title}) => {
+                       removeRole(title);
+                })
             }
             else if (choice === 'Quit') {
                 console.log('Thank you');
@@ -162,7 +202,7 @@ const promptUser = () => {
 
 allEmployees = () => {
     const sql = 
-    `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary, employee.first_name, employee.last_name AS manager
+    `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
      FROM employee
      LEFT JOIN role ON employee.role_id = role.id
      LEFT JOIN department ON role.department_id = department.id
@@ -177,10 +217,11 @@ allEmployees = () => {
 };
 
 allEmployeesByDepartment = () => {
-    const sql = `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary
+    const sql = `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary, CONCAT(manager.first_name, ' ',manager.last_name AS manager
     FROM employee
     LEFT JOIN role ON employee.role_id = role.id
     LEFT JOIN department ON role.department_id = department.id
+    LEFT JOIN employee AS manager ON employee.manager_id = manager.id
     ORDER BY department.name`
     
     connection.query(sql, function(err, res) {
@@ -251,3 +292,61 @@ updateEmployeeRole = (first_name, last_name, id) => {
     )
 
 };
+
+
+updateEmployeeManager = () => {
+
+};
+
+
+addRole = (title, salary, id) => {
+    console.log('Adding new role.');
+    connection.query(
+        'INSERT INTO role SET ?',
+        {
+            title: title,
+            salary: salary,
+            department_id: id
+        },
+        function(err,res) {
+            if(err) throw err;
+            console.log(res.affectedRows + ' role added.');
+            console.table(res)
+            promptUser();
+        }
+    )
+};
+
+removeRole = (title) => {
+    console.log('Removing role.');
+    connection.query(
+        'DELETE FROM role WHERE ?',
+        {
+            title: title
+        },
+        function(err,res) {
+            if(err) throw err;
+            console.log(res.affectedRows + ' role removed.');
+            console.table(res)
+            promptUser();
+        }
+    )
+};
+
+allEmployeesByManager = () => {
+    const sql = `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM employee
+    LEFT JOIN role ON employee.role_id = role.id
+    LEFT JOIN department ON role.department_id = department.id
+    LEFT JOIN employee AS manager ON employee.manager_id = manager.id
+    ORDER BY employee.manager_id`
+    
+    connection.query(sql, function(err, res) {
+        if(err) throw err;
+        console.table(res);
+        promptUser();
+    })
+    
+
+};
+
