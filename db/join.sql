@@ -17,4 +17,9 @@ connection.query(`SELECT title FROM role`) function (err,res){
 
 }
 
+`SELECT department.name, SUM(role.salary) totalBudget
+                 FROM role
+                 LEFT JOIN department ON role.department_id = department.id
+                 WHERE role.department_id = ?`;
+
 

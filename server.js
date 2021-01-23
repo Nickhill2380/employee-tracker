@@ -29,15 +29,20 @@ const promptUser = () => {
             name: 'choice',
             message: 'What would you like to do?',
             choices: [
+                'View All Employees',
                 'View All Employees By Department',
                 'View all Employees By Manager',
+                'View All Roles',
+                'View All Departments',
                 'Add Employee',
                 'Remove Employee',
                 'Update Employee Role',
                 'Update Employee Manager',
-                'View All Roles',
                 'Add Role',
                 'Remove Role',
+                'Add Department',
+                'Delete Department',
+                'Department Budget',
                 'Quit',
             ],
         })
@@ -45,6 +50,9 @@ const promptUser = () => {
             if(choice === 'View All Employees By Department') {
                 console.log('Viewing all employees by department.');
                 allEmployeesByDepartment();
+            }
+            else if(choice === 'View All Employees') {
+                allEmployees();
             }
             else if (choice === 'View all Employees By Manager') {
                 console.log('Viewing all employees by manager.')
@@ -280,6 +288,75 @@ const promptUser = () => {
                     }
                 )
             }
+            else if(choice === 'View All Departments'){
+                console.log('Viewing all departments');
+                viewAllDepartments();
+            }
+            else if (choice === 'Add Department'){
+                inquirer
+                .prompt([
+                    {
+                        type: 'input',
+                        name: 'name',
+                        message: "What is the department's name?"
+                    }
+                    ])
+                    .then(({name}) => {
+                        addDepartment(name);
+                    })
+            }
+            else if (choice === 'Delete Department'){
+                connection.query(
+                    'Select name FROM department',
+                    function(err, res) {
+                        if(err) throw err;
+                        departmentChoices = [];
+                        res.forEach(element => departmentChoices.push(element.name));
+                        inquirer
+                        .prompt([
+                            {
+                                type: 'list',
+                                name:'name',
+                                message: 'What is the department name?',
+                                choices: departmentChoices
+                            }
+                        ])
+                        .then(({name}) => {
+                            removeDepartment(name);
+                        })
+                    }
+                )
+
+            }
+            else if (choice === 'Department Budget'){
+                connection.query(
+                    'Select name FROM department',
+                    function(err, res) {
+                        if(err) throw err;
+                        departmentChoices = [];
+                        res.forEach(element => departmentChoices.push(element.name));
+                        inquirer
+                        .prompt([
+                            {
+                                type: 'list',
+                                name:'name',
+                                message: 'What is the department name?',
+                                choices: departmentChoices
+                            }
+                        ])
+                        .then(({name}) => {
+                            connection.query(
+                                'SELECT id FROM department WHERE ?',
+                                {
+                                   name: name
+                                }, 
+                               function(err,res) {
+                                   if(err) throw err;
+                                departmentBudget(res[0].id);
+                               })
+                        })
+                    })
+            }
             else if (choice === 'Quit') {
                 console.log('Thank you');
                 connection.end();
@@ -353,7 +430,11 @@ removeEmployee = (name) => {
 };
 
 viewRoles = () => {
-    connection.query(`SELECT title FROM role`, function(err,res) {
+    connection.query(
+        `SELECT role.id, role.title, role.salary, department.name
+         FROM role
+         LEFT JOIN department ON role.department_id = department.id`, 
+        function(err,res) {
         if(err) throw err;
         console.log('Here are the current job titles.');
         console.table(res);
@@ -441,3 +522,62 @@ allEmployeesByManager = () => {
 
 };
 
+viewAllDepartments = () => {
+    connection.query(`SELECT * FROM department`, function(err,res) {
+        if(err) throw err;
+        console.log('Here are the current departments.');
+        console.table(res);
+        promptUser();
+    });
+
+};
+
+removeDepartment = (name) => {
+    console.log('Removing department.');
+    connection.query(
+        'DELETE FROM department WHERE ?',
+        {
+            name: name
+        },
+        function(err,res) {
+            if(err) throw err;
+            console.log(res.affectedRows + ' department removed.');
+            console.table(res)
+            promptUser();
+        }
+    )
+};
+
+addDepartment = (name) => {
+    console.log('Adding new department.');
+    connection.query(
+        'INSERT INTO department SET ?',
+        {
+            name: name
+        },
+        function(err,res) {
+            if(err) throw err;
+            console.log(res.affectedRows + ' department added.');
+            console.table(res)
+            promptUser();
+        }
+    )
+};
+
+departmentBudget = (id) => {
+    const sql = `SELECT department.name AS department, SUM(role.salary) AS totalBudget
+    FROM employee
+    LEFT JOIN role ON employee.role_id = role.id
+    LEFT JOIN department ON role.department_id = department.id
+    LEFT JOIN employee AS manager ON employee.manager_id = manager.id
+    WHERE role.department_id = ?`;
+    params= [id]
+    connection.query(sql, params,
+
+    function(err,res) {
+        if(err) throw err;
+        console.table(res)
+        promptUser();
+    }
+    )
+};
