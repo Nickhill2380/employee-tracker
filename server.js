@@ -50,8 +50,6 @@ const promptUser = () => {
                 promptUser();
             }
             else if (choice === 'Add Employee') {
-               
-                
                inquirer
                 .prompt ([
                     {
@@ -84,9 +82,7 @@ const promptUser = () => {
                         console.log(res);
                         console.log(first_name + " " + last_name + " " + res[0].id);
                         addEmployee(first_name, last_name, res[0].id);
-                    } )
-
-                    
+                    })
                 })
             }
             else if(choice === 'Remove Employee') {
@@ -105,8 +101,39 @@ const promptUser = () => {
                
             }
             else if(choice === 'Update Employee Role'){
-                console.log('Whose role would you like to update?')
-                promptUser();
+                inquirer
+                .prompt ([
+                    {
+                        type: 'input',
+                        name: 'first_name',
+                        message: " What is the employee's first name?"
+                    },
+                    {
+                        type: 'input',
+                        name: 'last_name',
+                        message: "What is the employee's last name?"    
+                    },
+                    {
+                        type: 'list',
+                        name: 'title',
+                        message: 'What is their new job title?',
+                        choices: [('Sales Lead'),('Salesperson'), ('Lead Engineer'), ('Software Engineer'), ('Accountant'),('Legal Team Lead'), ('Lawyer')]
+                    },
+                ])
+                .then(({first_name, last_name, title}) => {
+                connection.query(
+                    'SELECT id FROM role WHERE ?',
+                    {
+                       title: title
+                    }, 
+                   function(err,res) {
+                       if(err) throw err;
+                   console.log(res[0].id);
+                   console.log(res);
+                   console.log(first_name + " " + last_name + " " + res[0].id);
+                   updateEmployeeRole(first_name, last_name, res[0].id);
+               })
+            })    
             }
             else if(choice === 'Update Employee Manager') {
                 console.log('Whose manager would you like to update?')
@@ -166,7 +193,7 @@ allEmployeesByDepartment = () => {
 
 addEmployee = (first_name, last_name, id) => {
    console.log('Adding new employee.');
-   const query = connection.query(
+   connection.query(
        'INSERT INTO employee SET ?',
        {
            first_name: first_name,
@@ -184,7 +211,7 @@ addEmployee = (first_name, last_name, id) => {
 
 removeEmployee = (first_name, last_name) => {
     console.log('Removing Employee.');
-    const sql = `DELETE FROM employee WHERE first_name = ?, last_name=?`;
+    const sql = `DELETE FROM employee WHERE first_name = ? AND last_name=?`;
     connection.query(sql,
         {
             first_name: first_name,
@@ -197,8 +224,30 @@ removeEmployee = (first_name, last_name) => {
 };
 
 viewRoles = () => {
-    connection.query(`SELECT title FROM role`);
+    connection.query(`SELECT title FROM role`, function(err,res) {
+        if(err) throw err;
+        console.log('Here are the current job titles.');
+        console.table(res);
+        promptUser();
+    });
+};
 
-    promptUser();
+updateEmployeeRole = (first_name, last_name, id) => {
+    console.log('Updating employee role');
+    connection.query('UPDATE employee SET ? WHERE ?',
+    [
+        {
+            role_id: id
+        },
+        {
+            last_name: last_name
+        }
+    ],
+    function(err,res) {
+        if (err) throw err;
+        console.log(res.affectedRows + ' employee updated!')
+        promptUser();
+    }
+    )
 
-}
+};
