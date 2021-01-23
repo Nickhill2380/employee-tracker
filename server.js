@@ -52,6 +52,12 @@ const promptUser = () => {
             }
             else if (choice === 'Add Employee') {
                 connection.query(
+                    'SELECT CONCAT(first_name, " ", last_name) AS name FROM employee',
+                    function(err, res) {
+                        if(err) throw err;
+                        employeeChoices = [];
+                        res.forEach(element => employeeChoices.push(element.name));
+                connection.query(
                     'Select title FROM role',
                     function(err, res) {
                         if(err) throw err;
@@ -75,10 +81,20 @@ const promptUser = () => {
                         message: 'What is their job title?',
                         choices: roleChoices
                     },
+                    {
+                        type:'list',
+                        name:'managerName',
+                        message: "What is their manager's name?",
+                        choices: employeeChoices
+                    }
                 ])
-            
-                .then(({first_name, last_name, title}) => {
-                    
+                .then(({first_name, last_name, title, managerName}) => {
+                    nameSplitter = managerName.split(" ");
+                connection.query(
+                    'SELECT id FROM employee WHERE first_name = ? AND last_name = ?',
+                    [nameSplitter[0],nameSplitter[1]], 
+                   function(err,manager) {
+                       if(err) throw err;
                     connection.query(
                          'SELECT id FROM role WHERE ?',
                          {
@@ -89,9 +105,11 @@ const promptUser = () => {
                         console.log(res[0].id);
                         console.log(res);
                         console.log(first_name + " " + last_name + " " + res[0].id);
-                        addEmployee(first_name, last_name, res[0].id);
+                        addEmployee(first_name, last_name, res[0].id, manager[0].id);
+                        })
                     })
                 })
+            })
             })
             }
             else if(choice === 'Remove Employee') {
@@ -303,14 +321,15 @@ allEmployeesByDepartment = () => {
     
 };
 
-addEmployee = (first_name, last_name, id) => {
+addEmployee = (first_name, last_name, id, managerId) => {
    console.log('Adding new employee.');
    connection.query(
        'INSERT INTO employee SET ?',
        {
            first_name: first_name,
            last_name: last_name,
-           role_id: id
+           role_id: id,
+           manager_id: managerId
        },
        function(err,res) {
            if(err) throw err;
