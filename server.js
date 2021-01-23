@@ -1,5 +1,7 @@
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
+const cTable = require('console.table');
+const { raw } = require('express');
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -16,8 +18,8 @@ connection.connect(err => {
 })
 
 afterConnection = () => {
-    promptUser();
- }
+    allEmployees();
+ };
 
 const promptUser = () => {
     return inquirer.prompt(
@@ -41,14 +43,16 @@ const promptUser = () => {
         .then(({ choice }) => {
             if(choice === 'View All Employees By Department') {
                 console.log('Viewing all employees by department.');
-                promptUser();
+                allEmployeesByDepartment();
             }
             else if (choice === 'View all Employees By Manager') {
                 console.log('Viewing all employees by manager.')
                 promptUser();
             }
             else if (choice === 'Add Employee') {
-                inquirer
+               
+                
+               inquirer
                 .prompt ([
                     {
                         type: 'input',
@@ -64,17 +68,41 @@ const promptUser = () => {
                         type: 'list',
                         name: 'title',
                         message: 'What is their job title?',
-                        choices: ['Sales Lead', 'Salesperson', 'Lead Enigneer', 'Software Engineer', 'Accountant', 'Legal Team Lead', 'Lawyer']
+                        choices: [('Sales Lead'),('Salesperson'), ('Lead Engineer'), ('Software Engineer'), ('Accountant'),('Legal Team Lead'), ('Lawyer')]
                     },
                 ])
                 .then(({first_name, last_name, title}) => {
-                    console.log(first_name + " " + last_name + " " + title);
-                    promptUser();
-                })   
+                    
+                    connection.query(
+                         'SELECT id FROM role WHERE ?',
+                         {
+                            title: title
+                         }, 
+                        function(err,res) {
+                            if(err) throw err;
+                        console.log(res[0].id);
+                        console.log(res);
+                        console.log(first_name + " " + last_name + " " + res[0].id);
+                        addEmployee(first_name, last_name, res[0].id);
+                    } )
+
+                    
+                })
             }
             else if(choice === 'Remove Employee') {
                 console.log('Who would you like to remove?');
-                promptUser();
+                inquirer
+                .prompt ([
+                    {
+                    type:'list',
+                    name: 'first_name',
+                    message: "What is the employee's first name?",
+                    choices: [('Ted')]
+                    }
+                ])
+                
+                removeEmployee(first_name);
+               
             }
             else if(choice === 'Update Employee Role'){
                 console.log('Whose role would you like to update?')
@@ -86,14 +114,14 @@ const promptUser = () => {
             }
             else if (choice === 'View All Roles') {
                 console.log('Viewing all roles')
-                promptUser();
+                viewRoles();
             }
             else if (choice === 'Add Role') {
                 console.log("What role would you like to add?")
                 promptUser();
             }
             else if(choice === 'Remove Role') {
-                console.log('What role would youl iek to remove?')
+                console.log('What role would you like to remove?')
                 promptUser();
             }
             else if (choice === 'Quit') {
@@ -105,3 +133,72 @@ const promptUser = () => {
 
 
 
+allEmployees = () => {
+    const sql = 
+    `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary, employee.first_name, employee.last_name AS manager
+     FROM employee
+     LEFT JOIN role ON employee.role_id = role.id
+     LEFT JOIN department ON role.department_id = department.id
+     LEFT JOIN employee AS manager ON employee.manager_id = manager.id`;
+    
+    connection.query(sql, function(err,res) {
+        if (err) throw err;
+        console.table(res);
+        promptUser();
+    })
+    
+};
+
+allEmployeesByDepartment = () => {
+    const sql = `SELECT employee.id, employee.first_name, employee.last_name, role.title AS title, department.name AS department, role.salary AS salary
+    FROM employee
+    LEFT JOIN role ON employee.role_id = role.id
+    LEFT JOIN department ON role.department_id = department.id
+    ORDER BY department.name`
+    
+    connection.query(sql, function(err, res) {
+        if(err) throw err;
+        console.table(res);
+        promptUser();
+    })
+    
+};
+
+addEmployee = (first_name, last_name, id) => {
+   console.log('Adding new employee.');
+   const query = connection.query(
+       'INSERT INTO employee SET ?',
+       {
+           first_name: first_name,
+           last_name: last_name,
+           role_id: id
+       },
+       function(err,res) {
+           if(err) throw err;
+           console.log(res.affectedRows + ' employee added.');
+           console.table(res)
+           promptUser();
+       }
+   )
+};
+
+removeEmployee = (first_name, last_name) => {
+    console.log('Removing Employee.');
+    const sql = `DELETE FROM employee WHERE first_name = ?, last_name=?`;
+    connection.query(sql,
+        {
+            first_name: first_name,
+            last_name: last_name
+        }
+        ,  function(err, res) {
+            if(err) throw err;
+            console.log(res.affectedRows + ' employee removed.')
+        });   
+};
+
+viewRoles = () => {
+    connection.query(`SELECT title FROM role`);
+
+    promptUser();
+
+}
