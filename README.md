@@ -6,7 +6,7 @@
                 
 ## Description
 
-This application allows the user to set up a database of their employees wtih their role, salary, department and manager. They can allows add new roles and departments. Update employee role and manager if they change positons.
+This application allows the user to set up a database of their employees with their role, salary, department and manager. They can allows add new roles and departments. Update employee role and manager if they change positons.
 
 ## Table of Contents
 
