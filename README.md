@@ -23,7 +23,7 @@ you will need to install npm, inquirer, and mysql2. There are schema and seeds s
 
 Please see attach demo and image
 ![image](https://user-images.githubusercontent.com/71850826/105640633-169fdb80-5e4d-11eb-8443-cddec591f782.png)
-![demo](https://drive.google.com/file/d/1Bnd3EMgDtSB3vPmjr_kc9s8VgQGK3Yfa/preview)
+Demo:[https://drive.google.com/file/d/1Bnd3EMgDtSB3vPmjr_kc9s8VgQGK3Yfa/preview]
 
 ## Questions
 
